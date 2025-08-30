@@ -122,6 +122,17 @@ getgenv().ExunysDeveloperAimbot = {
 		LockedColor = Color3fromRGB(255, 150, 150)
 	},
 
+	-- New Chams Settings
+	ChamsSettings = {
+		Enabled = false,
+		Transparency = 0.5,
+		Thickness = 1,
+		Color = Color3fromRGB(255, 255, 255),
+		OutlineColor = Color3fromRGB(0, 0, 0),
+		FillColor = Color3fromRGB(255, 255, 255),
+		FillTransparency = 0.3
+	},
+
 	Blacklisted = {},
 	FOVCircleOutline = Drawingnew("Circle"),
 	FOVCircle = Drawingnew("Circle")
@@ -131,6 +142,95 @@ local Environment = getgenv().ExunysDeveloperAimbot
 
 setrenderproperty(Environment.FOVCircle, "Visible", false)
 setrenderproperty(Environment.FOVCircleOutline, "Visible", false)
+
+-- Chams variables
+local ChamsObjects = {}
+local ChamsConnections = {}
+
+-- Function to create chams for a player
+local function CreateChams(Player)
+	if not Environment.ChamsSettings.Enabled then return end
+	
+	local Character = Player.Character
+	if not Character then return end
+	
+	-- Remove existing chams for this player
+	if ChamsObjects[Player.Name] then
+		for _, obj in pairs(ChamsObjects[Player.Name]) do
+			pcall(function() obj:Remove() end)
+		end
+		ChamsObjects[Player.Name] = nil
+	end
+	
+	-- Create new chams
+	local chams = {}
+	
+	-- Create chams for main parts
+	local parts = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
+	for _, partName in pairs(parts) do
+		local part = Character:FindFirstChild(partName)
+		if part then
+			-- Create outline
+			local outline = Instance.new("SelectionBox")
+			outline.Name = "ChamsOutline_" .. Player.Name .. "_" .. partName
+			outline.Adornee = part
+			outline.LineThickness = Environment.ChamsSettings.Thickness
+			outline.Color3 = Environment.ChamsSettings.OutlineColor
+			outline.Transparency = Environment.ChamsSettings.Transparency
+			outline.Parent = part
+			
+			-- Create fill
+			local fill = Instance.new("Highlight")
+			fill.Name = "ChamsFill_" .. Player.Name .. "_" .. partName
+			fill.Adornee = part
+			fill.FillColor = Environment.ChamsSettings.FillColor
+			fill.FillTransparency = Environment.ChamsSettings.FillTransparency
+			fill.OutlineColor = Environment.ChamsSettings.Color
+			fill.OutlineTransparency = Environment.ChamsSettings.Transparency
+			fill.Parent = part
+			
+			table.insert(chams, outline)
+			table.insert(chams, fill)
+		end
+	end
+	
+	ChamsObjects[Player.Name] = chams
+end
+
+-- Function to remove chams for a player
+local function RemoveChams(Player)
+	if ChamsObjects[Player.Name] then
+		for _, obj in pairs(ChamsObjects[Player.Name]) do
+			pcall(function() obj:Remove() end)
+		end
+		ChamsObjects[Player.Name] = nil
+	end
+end
+
+-- Function to update all chams
+local function UpdateChams()
+	if not Environment.ChamsSettings.Enabled then
+		-- Remove all chams
+		for playerName, chams in pairs(ChamsObjects) do
+			for _, obj in pairs(chams) do
+				pcall(function() obj:Remove() end)
+			end
+		end
+		ChamsObjects = {}
+		return
+	end
+	
+	-- Update existing chams or create new ones
+	for _, Player in pairs(GetPlayers(Players)) do
+		if Player ~= LocalPlayer and Player.Character then
+			if not ChamsObjects[Player.Name] then
+				CreateChams(Player)
+			end
+		else
+			RemoveChams(Player)
+		end
+	end
+end
 
 --// Core Functions
 
@@ -233,6 +333,9 @@ local Load = function()
 	ServiceConnections.RenderSteppedConnection = Connect(__index(RunService, Environment.DeveloperSettings.UpdateMode), function()
 		local OffsetToMoveDirection, LockPart = Settings.OffsetToMoveDirection, Settings.LockPart
 
+		-- Update chams
+		UpdateChams()
+
 		if FOVSettings.Enabled and Settings.Enabled then
 			for Index, Value in next, FOVSettings do
 				if Index == "Color" then
@@ -332,11 +435,19 @@ end)
 function Environment.Exit(self) -- METHOD | ExunysDeveloperAimbot:Exit(<void>)
 	assert(self, "EXUNYS_AIMBOT-V3.Exit: Missing parameter #1 \"self\" <table>.")
 
+	-- Clean up chams
+	for playerName, chams in pairs(ChamsObjects) do
+		for _, obj in pairs(chams) do
+			pcall(function() obj:Remove() end)
+		end
+	end
+	ChamsObjects = {}
+
 	for Index, _ in next, ServiceConnections do
 		Disconnect(ServiceConnections[Index])
 	end
 
-	Load = nil; ConvertVector = nil; CancelLock = nil; GetClosestPlayer = nil; GetRainbowColor = nil; FixUsername = nil
+	Load = nil; ConvertVector = nil; CancelLock = nil; GetClosestPlayer = nil; GetRainbowColor = nil; FixUsername = nil; UpdateChams = nil; CreateChams = nil; RemoveChams = nil
 
 	self.FOVCircle:Remove()
 	self.FOVCircleOutline:Remove()
@@ -383,6 +494,20 @@ function Environment.GetClosestPlayer() -- ExunysDeveloperAimbot.GetClosestPlaye
 	CancelLock()
 
 	return Value
+end
+
+-- Function to control chams
+function Environment.SetChamsEnabled(enabled)
+	Environment.ChamsSettings.Enabled = enabled
+	if not enabled then
+		-- Remove all chams when disabled
+		for playerName, chams in pairs(ChamsObjects) do
+			for _, obj in pairs(chams) do
+				pcall(function() obj:Remove() end)
+			end
+		end
+		ChamsObjects = {}
+	end
 end
 
 Environment.Load = Load -- ExunysDeveloperAimbot.Load()
