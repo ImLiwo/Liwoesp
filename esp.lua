@@ -85,10 +85,10 @@ getgenv().ExunysDeveloperAimbot = {
 	},
 
 	Settings = {
-		Enabled = true,
+		Enabled = false, -- Changed from true to false
 
 		TeamCheck = false,
-		AliveCheck = true,
+		AliveCheck = false, -- Changed from true to false
 		WallCheck = false,
 
 		OffsetToMoveDirection = false,
@@ -105,8 +105,8 @@ getgenv().ExunysDeveloperAimbot = {
 	},
 
 	FOVSettings = {
-		Enabled = true,
-		Visible = true,
+		Enabled = false, -- Changed from true to false
+		Visible = false, -- Changed from true to false
 
 		Radius = 90,
 		NumSides = 60,
